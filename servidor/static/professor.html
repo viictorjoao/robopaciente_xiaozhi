@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Robô Paciente — Professor</title>
+<link rel="stylesheet" href="/static/estilo.css">
+</head>
+<body>
+<div id="login" class="centro" style="display:none;max-width:380px;margin-top:12vh">
+  <div class="card">
+    <h2>🧠 Robô Paciente</h2>
+    <p class="muted">Área do professor</p>
+    <form id="formLogin">
+      <label>Senha</label>
+      <input type="password" id="senha" autofocus>
+      <div id="erroLogin" class="erro" style="display:none;margin-top:10px"></div>
+      <button class="btn pri grande" style="width:100%;margin-top:14px;justify-content:center">Entrar</button>
+    </form>
+    <p class="small muted" style="margin-top:14px">Alunos: acessem <a href="/aluno">/aluno</a></p>
+  </div>
+</div>
+
+<div id="app" class="app" style="display:none">
+  <nav class="lado">
+    <div class="logo"><span>🧠</span>Robô Paciente</div>
+    <button data-v="painel">📊 Painel</button>
+    <button data-v="sessoes">💬 Sessões</button>
+    <button data-v="relatorios">📈 Relatórios</button>
+    <button data-v="pacientes">🧑‍⚕️ Pacientes</button>
+    <button data-v="robos">🤖 Robôs</button>
+    <button data-v="turmas">🎓 Turmas e alunos</button>
+    <button data-v="simulador">🧪 Simulador</button>
+    <button data-v="config">⚙️ Configuração</button>
+    <div class="rodape"><button id="sair">↩ Sair</button></div>
+  </nav>
+  <main id="conteudo"></main>
+</div>
+<div id="modal"></div>
+<script src="/static/comum.js"></script>
+<script src="/static/professor.js"></script>
+</body>
+</html>
