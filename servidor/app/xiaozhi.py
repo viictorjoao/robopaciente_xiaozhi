@@ -176,31 +176,49 @@ class Conexao:
         self.falando = True
         await self.json(type="llm", emotion="neutral", text="😐")
         await self.json(type="tts", state="start")
-        try:
-            inicio = time.monotonic()
-            enviados = 0
-            for frase in ia.dividir_frases(texto):
+
+        frases = list(ia.dividir_frases(texto))
+        limite = asyncio.Semaphore(2)            # no máximo 2 sínteses ao mesmo tempo
+
+        async def preparar(frase):
+            async with limite:
                 mp3 = await ia.sintetizar_mp3(frase, voz, velocidade)
-                pcm = audio.para_pcm(mp3, TAXA_SAIDA) if mp3 else b""
+            if not mp3:
+                return b""
+            return await asyncio.to_thread(audio.para_pcm, mp3, TAXA_SAIDA)
+
+        # começa a preparar todas as frases já, enquanto a primeira toca
+        tarefas = [asyncio.create_task(preparar(f)) for f in frases]
+        try:
+            quadro = FRAME_MS / 1000
+            folga = 0.3                          # áudio adiantado que o robô pode guardar (s)
+            toca_ate = time.monotonic()          # quando o áudio já enviado termina de tocar
+            for frase, tarefa in zip(frases, tarefas):
+                pcm = await tarefa
                 await self.json(type="tts", state="sentence_start", text=frase)
                 for pacote in enc.encode_pcm(pcm):
-                    # envia ~em tempo real (com 5 quadros de folga) para não estourar o buffer do ESP32
-                    alvo = inicio + max(0, enviados - 5) * FRAME_MS / 1000
-                    espera = alvo - time.monotonic()
+                    agora = time.monotonic()
+                    if toca_ate < agora:         # a fila do robô esvaziou
+                        toca_ate = agora
+                    espera = toca_ate - agora - folga
                     if espera > 0:
                         await asyncio.sleep(espera)
                     await self.bin(pacote)
-                    enviados += 1
-            resto = inicio + enviados * FRAME_MS / 1000 - time.monotonic()
+                    toca_ate += quadro
+            # espera o robô terminar de tocar antes de avisar o fim da fala
+            resto = toca_ate - time.monotonic()
             if resto > 0:
-                await asyncio.sleep(resto)
+                await asyncio.sleep(resto + 0.2)
         finally:
+            for t in tarefas:
+                if not t.done():
+                    t.cancel()
             self.falando = False
             try:
                 await self.json(type="tts", state="stop")
             except Exception:
                 pass
-
+            
     async def ao_receber_json(self, msg: dict):
         tipo = msg.get("type")
         if tipo == "hello":
